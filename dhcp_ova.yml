@@ -1,0 +1,47 @@
+---
+- hosts: all
+  gather_facts: False
+  tasks:
+    - name: Set the cache of all the download links
+      import_role:
+        name: cache
+- hosts: localhost
+  gather_facts: True
+  environment:
+    PATH: "{{ playbook_dir }}/bin:{{ ansible_env.PATH }}"
+  tasks:
+    - name: Run all the common tasks
+      import_role:
+        name: common
+    - name: Run dns tasks
+      import_role:
+        name: config_dnsmasq
+- hosts: localhost
+  gather_facts: False
+  environment:
+    PATH: "{{ playbook_dir }}/bin:{{ ansible_env.PATH }}"
+    GOVC_USERNAME: "{{ vcenter.admin_username }}"
+    GOVC_PASSWORD: "{{ vcenter.admin_password }}"
+    GOVC_URL: "https://{{ vcenter.ip }}"
+    GOVC_DATACENTER: "{{ datacenter }}"
+    GOVC_INSECURE: 1
+  tasks:
+    #- name: Run the vmware role to setup vCenter folder
+    #  import_role:
+    #    name: vmware
+    - name: Run the modify ignition file script to add dnsnameserver
+      import_role:
+         name: ignition_change
+      when: skip_generate is not defined
+
+    - name: Run haproxy config change
+      import_role:
+        name: config_haproxy
+
+    - name: Run steps specific to DHCP and the use of an OVA file
+      import_role:
+        name: dhcp_ova
+
+    - name: Run steps to finish cluster install
+      import_role:
+        name: finish_install
